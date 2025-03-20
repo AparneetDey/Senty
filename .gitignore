@@ -44,6 +44,10 @@ Thumbs.db
 uploads/
 *.log
 *.csv
+*.xlsx
+*.xls
 
 # Vercel
-.vercel 
+.vercel
+.now
+node_modules/ 

@@ -10,13 +10,18 @@ import sys
 
 # Download required NLTK data
 try:
-    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('punkt')
 except LookupError:
-    nltk.download('punkt')
+    # For Vercel deployment, download to a writable directory
+    if os.environ.get('VERCEL'):
+        nltk.download('punkt', download_dir='/tmp')
+        nltk.data.path.append('/tmp')
+    else:
+        nltk.download('punkt')
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = '/tmp' if os.environ.get('VERCEL') else 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def analyze_sentiment(text):
