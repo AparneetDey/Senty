@@ -1,50 +1,101 @@
 from flask import Flask, render_template, request, jsonify
-from sentiment_analyzer import analyze_sentiment
-from data_processor import process_excel_file
-import os
-import nltk
-
-# Download required NLTK data
-nltk.download('vader_lexicon', quiet=True)
-nltk.download('punkt', quiet=True)
-nltk.download('stopwords', quiet=True)
+import pandas as pd
+import numpy as np
+from data_processor import DataProcessor
+import plotly.express as px
+import plotly.graph_objects as go
+from collections import Counter
+import re
+from textblob import TextBlob
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['UPLOAD_FOLDER'] = '/tmp'  # Use /tmp for Vercel
 
-# Ensure upload folder exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+# Initialize data processor
+data_processor = DataProcessor()
+
+def analyze_sentiment(text):
+    """Simple sentiment analysis using TextBlob"""
+    if not isinstance(text, str):
+        return 0
+    analysis = TextBlob(text)
+    return analysis.sentiment.polarity
+
+def get_sentiment_label(score):
+    """Convert sentiment score to label"""
+    if score > 0.1:
+        return 'Positive'
+    elif score < -0.1:
+        return 'Negative'
+    else:
+        return 'Neutral'
 
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    if 'file' in request.files:
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-        
-        if file and file.filename.endswith(('.xlsx', '.xls', '.csv')):
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(filepath)
-            results = process_excel_file(filepath)
-            os.remove(filepath)  # Clean up the uploaded file
-            return jsonify(results)
-        else:
-            return jsonify({'error': 'Invalid file format. Please upload Excel or CSV file.'}), 400
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
     
-    elif 'text' in request.form:
-        text = request.form['text']
-        if not text.strip():
-            return jsonify({'error': 'No text provided'}), 400
-        
-        result = analyze_sentiment(text)
-        return jsonify(result)
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
     
-    return jsonify({'error': 'No input provided'}), 400
+    if file and file.filename.endswith('.csv'):
+        try:
+            # Read the CSV file
+            df = pd.read_csv(file)
+            
+            # Process the data
+            df['Sentiment'] = df['Review'].apply(analyze_sentiment)
+            df['Sentiment_Label'] = df['Sentiment'].apply(get_sentiment_label)
+            
+            # Calculate statistics
+            total_reviews = len(df)
+            sentiment_counts = df['Sentiment_Label'].value_counts()
+            avg_sentiment = df['Sentiment'].mean()
+            
+            # Create visualizations
+            sentiment_pie = px.pie(
+                values=sentiment_counts.values,
+                names=sentiment_counts.index,
+                title='Sentiment Distribution'
+            )
+            
+            sentiment_dist = px.histogram(
+                df,
+                x='Sentiment',
+                title='Sentiment Score Distribution',
+                nbins=50
+            )
+            
+            # Prepare word cloud data
+            text = ' '.join(df['Review'].astype(str))
+            words = re.findall(r'\w+', text.lower())
+            word_freq = Counter(words)
+            
+            # Create word cloud data
+            word_cloud_data = [
+                {'text': word, 'value': freq}
+                for word, freq in word_freq.most_common(50)
+                if len(word) > 2  # Filter out short words
+            ]
+            
+            return jsonify({
+                'success': True,
+                'total_reviews': total_reviews,
+                'sentiment_counts': sentiment_counts.to_dict(),
+                'avg_sentiment': float(avg_sentiment),
+                'sentiment_pie': sentiment_pie.to_json(),
+                'sentiment_dist': sentiment_dist.to_json(),
+                'word_cloud': word_cloud_data
+            })
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    return jsonify({'error': 'Invalid file format. Please upload a CSV file.'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True) 
