@@ -3,9 +3,8 @@
     "builds": [
         {
             "src": "app.py",
-            "use": "@vercel/python@3.1.30",
+            "use": "@vercel/python",
             "config": {
-                "maxLambdaSize": "15mb",
                 "runtime": "python3.9"
             }
         }
@@ -17,8 +16,6 @@
         }
     ],
     "env": {
-        "VERCEL": "1",
-        "PYTHONUNBUFFERED": "1",
         "NLTK_DATA": "/tmp/nltk_data"
     }
 } 
