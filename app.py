@@ -8,14 +8,19 @@ import json
 import traceback
 import sys
 
+# Set up NLTK data path for Vercel
+if os.environ.get('VERCEL'):
+    NLTK_DATA = os.path.join('/tmp', 'nltk_data')
+    if not os.path.exists(NLTK_DATA):
+        os.makedirs(NLTK_DATA)
+    nltk.data.path.append(NLTK_DATA)
+
 # Download required NLTK data
 try:
     nltk.data.find('punkt')
 except LookupError:
-    # For Vercel deployment, download to a writable directory
     if os.environ.get('VERCEL'):
-        nltk.download('punkt', download_dir='/tmp')
-        nltk.data.path.append('/tmp')
+        nltk.download('punkt', download_dir=NLTK_DATA)
     else:
         nltk.download('punkt')
 
