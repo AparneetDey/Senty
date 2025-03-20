@@ -1,14 +1,9 @@
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
-env/
-venv/
-.env
-.venv
-ENV/
 build/
 develop-eggs/
 dist/
@@ -26,16 +21,29 @@ var/
 
 # Virtual Environment
 venv/
-.env
-.venv
+.venv/
 ENV/
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # IDE
-.idea/
 .vscode/
+.idea/
 *.swp
 *.swo
+*.code-workspace
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Project specific
+uploads/
+*.log
+*.csv
+
+# Vercel
+.vercel 

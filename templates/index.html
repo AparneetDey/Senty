@@ -14,6 +14,7 @@
         .container {
             max-width: 800px;
             margin-top: 2rem;
+            padding: 20px;
         }
         .card {
             border: none;
@@ -22,21 +23,29 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
             margin-bottom: 1rem;
         }
+        .form-section {
+            margin-bottom: 30px;
+        }
         .result-card {
             display: none;
             margin-top: 1rem;
         }
         .sentiment-positive {
             color: #4ade80;
+            background-color: rgba(74, 222, 128, 0.1);
         }
         .sentiment-negative {
             color: #f87171;
+            background-color: rgba(248, 113, 113, 0.1);
         }
         .sentiment-neutral {
             color: #94a3b8;
+            background-color: rgba(148, 163, 184, 0.1);
         }
         .loading {
             display: none;
+            text-align: center;
+            padding: 20px;
         }
         .score-card {
             text-align: center;
@@ -113,13 +122,117 @@
         .btn-primary:hover {
             background-color: #22c55e;
         }
+        .sentiment-result {
+            text-align: center;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .sentiment-result i {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .score {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-top: 0.5rem;
+        }
+        .analysis-breakdown {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+        }
+        .breakdown-title {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #3f3f3f;
+        }
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background-color: #1a1a1a;
+            border-radius: 6px;
+            transition: transform 0.2s ease;
+        }
+        .breakdown-item:hover {
+            transform: translateX(5px);
+        }
+        .breakdown-label {
+            color: #e1e1e1;
+            font-weight: 500;
+        }
+        .breakdown-value {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-weight: 600;
+            background-color: #2a2a2a;
+        }
+        .breakdown-value.positive {
+            color: #4ade80;
+        }
+        .breakdown-value.negative {
+            color: #f87171;
+        }
+        .breakdown-value.neutral {
+            color: #94a3b8;
+        }
+        .file-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .file-stats p {
+            margin: 10px;
+            padding: 10px;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            min-width: 150px;
+            text-align: center;
+        }
+        .word-cloud {
+            margin-top: 20px;
+            padding: 20px;
+            text-align: center;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            min-height: 200px;
+        }
+        .word-cloud-item {
+            display: inline-block;
+            margin: 5px;
+            padding: 3px 6px;
+            background-color: #1a1a1a;
+            border-radius: 3px;
+            color: #e1e1e1;
+            transition: transform 0.2s ease;
+        }
+        .word-cloud-item:hover {
+            transform: scale(1.1);
+        }
+        .title-text {
+            color: #4ade80;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .title-description {
+            font-size: 1rem;
+            color: #94a3b8;
+            margin-top: 0.2rem;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="text-center mb-4">
-            <span class="sentiment-positive">Senty</span>
-            <small class="d-block text-muted" style="font-size: 1rem;">Sentiment Analysis Made Simple</small>
+            <span class="title-text">Senty</span>
+            <small class="d-block title-description">Sentiment Analysis Made Simple</small>
         </h1>
         
         <div class="card p-4">
@@ -151,10 +264,11 @@
                             <i class="bi bi-cloud-arrow-up file-upload-icon"></i>
                             <h5>Drop your file here or click to upload</h5>
                             <div class="file-specs">
-                                <p class="mb-1">Accepted formats: .xlsx, .xls, .csv</p>
+                                <p class="mb-1">Accepted formats: CSV, Excel (.xlsx, .xls)</p>
                                 <p class="mb-0">First column should contain the reviews</p>
                             </div>
-                            <input type="file" class="form-control" id="fileInput" accept=".xlsx,.xls,.csv" required>
+                            <input type="file" class="form-control" id="fileInput" accept=".csv,.xlsx,.xls" required style="display: none;">
+                            <div id="selectedFileName" class="mt-2"></div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 mt-3">Analyze File</button>
                     </form>
@@ -177,12 +291,270 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Add these drag and drop event handlers
+        // Handle text form submission
+        document.getElementById('textForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const textInput = document.getElementById('textInput');
+            const text = textInput.value.trim();
+            
+            if (!text) {
+                alert('Please enter some text');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('/analyze/text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to analyze text');
+                }
+
+                displayTextResults(data);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error analyzing text: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Handle file form submission
+        document.getElementById('fileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+
+            const validExtensions = ['.csv', '.xlsx', '.xls'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!validExtensions.includes(fileExtension)) {
+                alert('Please upload a CSV or Excel file');
+                return;
+            }
+
+            showLoading();
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/analyze/file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to analyze file');
+                }
+
+                displayFileResults(data);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error analyzing file: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        function showLoading() {
+            document.querySelector('.loading').style.display = 'block';
+            document.querySelector('.result-card').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.querySelector('.loading').style.display = 'none';
+            document.querySelector('.result-card').style.display = 'block';
+        }
+
+        function displayTextResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const sentiment = data.sentiment;
+            const sentimentClass = getSentimentClass(sentiment.label);
+            const sentimentIcon = getSentimentIcon(sentiment.label);
+            
+            let wordCloudHtml = '';
+            if (data.wordCloudData && data.wordCloudData.length > 0) {
+                wordCloudHtml = '<div class="word-cloud" id="wordCloud"></div>';
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <div class="sentiment-result ${sentimentClass}">
+                            <i class="bi ${sentimentIcon}"></i>
+                            <h4 class="mb-2">${sentiment.label}</h4>
+                            <p class="score">Sentiment Score: ${sentiment.score.toFixed(2)}</p>
+                        </div>
+                        
+                        <div class="analysis-breakdown">
+                            <h5 class="breakdown-title">Analysis Breakdown</h5>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Sentiment Category</span>
+                                <span class="breakdown-value ${sentiment.label.toLowerCase()}">${sentiment.label}</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Confidence Score</span>
+                                <span class="breakdown-value ${getConfidenceClass(Math.abs(sentiment.score))}">${(Math.abs(sentiment.score) * 100).toFixed(1)}%</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Polarity</span>
+                                <span class="breakdown-value ${sentiment.score > 0 ? 'positive' : sentiment.score < 0 ? 'negative' : 'neutral'}">${sentiment.score > 0 ? 'Positive' : sentiment.score < 0 ? 'Negative' : 'Neutral'}</span>
+                            </div>
+                        </div>
+                        ${wordCloudHtml}
+                    </div>
+                </div>
+            `;
+
+            if (data.wordCloudData && data.wordCloudData.length > 0) {
+                renderWordCloud(data.wordCloudData);
+            }
+        }
+
+        function displayFileResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const avgSentiment = getSentimentLabel(data.averageSentiment);
+            const sentimentClass = getSentimentClass(avgSentiment);
+            const sentimentIcon = getSentimentIcon(avgSentiment);
+            
+            const totalReviews = data.totalReviews;
+            const positivePercentage = ((data.sentimentCounts.Positive / totalReviews) * 100).toFixed(1);
+            const neutralPercentage = ((data.sentimentCounts.Neutral / totalReviews) * 100).toFixed(1);
+            const negativePercentage = ((data.sentimentCounts.Negative / totalReviews) * 100).toFixed(1);
+            
+            let wordCloudHtml = '';
+            if (data.wordCloudData && data.wordCloudData.length > 0) {
+                wordCloudHtml = '<div class="word-cloud" id="wordCloud"></div>';
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <div class="sentiment-result ${sentimentClass}">
+                            <i class="bi ${sentimentIcon}"></i>
+                            <h4 class="mb-2">Overall: ${avgSentiment}</h4>
+                            <p class="score">Average Score: ${data.averageSentiment.toFixed(2)}</p>
+                        </div>
+
+                        <div class="analysis-breakdown">
+                            <h5 class="breakdown-title">Analysis Breakdown</h5>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Total Reviews Analyzed</span>
+                                <span class="breakdown-value">${totalReviews}</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Positive Reviews</span>
+                                <span class="breakdown-value positive">${data.sentimentCounts.Positive} (${positivePercentage}%)</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Neutral Reviews</span>
+                                <span class="breakdown-value neutral">${data.sentimentCounts.Neutral} (${neutralPercentage}%)</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Negative Reviews</span>
+                                <span class="breakdown-value negative">${data.sentimentCounts.Negative} (${negativePercentage}%)</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Confidence Level</span>
+                                <span class="breakdown-value ${getConfidenceClass(Math.abs(data.averageSentiment))}">${(Math.abs(data.averageSentiment) * 100).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                        ${wordCloudHtml}
+                    </div>
+                </div>
+            `;
+
+            if (data.wordCloudData && data.wordCloudData.length > 0) {
+                renderWordCloud(data.wordCloudData);
+            }
+        }
+
+        function getSentimentClass(label) {
+            switch (label) {
+                case 'Positive': return 'sentiment-positive';
+                case 'Negative': return 'sentiment-negative';
+                default: return 'sentiment-neutral';
+            }
+        }
+
+        function getSentimentIcon(label) {
+            switch (label) {
+                case 'Positive': return 'bi-emoji-smile';
+                case 'Negative': return 'bi-emoji-frown';
+                default: return 'bi-emoji-neutral';
+            }
+        }
+
+        function getSentimentLabel(score) {
+            if (score > 0.1) return 'Positive';
+            if (score < -0.1) return 'Negative';
+            return 'Neutral';
+        }
+
+        function getConfidenceClass(score) {
+            if (score >= 0.7) return 'positive';
+            if (score >= 0.3) return 'neutral';
+            return 'negative';
+        }
+
+        function renderWordCloud(words) {
+            const element = document.getElementById('wordCloud');
+            if (!element) return;
+
+            // Clear any existing content
+            element.innerHTML = '';
+
+            // Sort words by value (frequency)
+            words.sort((a, b) => b.value - a.value);
+
+            // Get the maximum frequency to calculate relative sizes
+            const maxValue = words[0].value;
+
+            // Create and append word elements
+            words.forEach(word => {
+                const size = Math.max(0.8, Math.min(2, word.value / maxValue * 2));
+                const span = document.createElement('span');
+                span.className = 'word-cloud-item';
+                span.style.fontSize = `${size}em`;
+                span.textContent = word.text;
+                element.appendChild(span);
+            });
+        }
+
+        // Add drag and drop event handlers
         const dropZone = document.getElementById('dropZone');
-        
+        const fileInput = document.getElementById('fileInput');
+        const selectedFileName = document.getElementById('selectedFileName');
+
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, preventDefaults, false);
-            document.body.addEventListener(eventName, preventDefaults, false);
         });
 
         function preventDefaults(e) {
@@ -212,165 +584,30 @@
             const dt = e.dataTransfer;
             const files = dt.files;
             if (files.length) {
-                const file = files[0];
-                if (file.name.match(/\.(xlsx|xls|csv)$/)) {
-                    handleFileSelect(file);
-                } else {
-                    alert('Please upload an Excel or CSV file');
-                }
+                handleFileSelect(files[0]);
             }
         }
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
 
         function handleFileSelect(file) {
-            const fileInput = document.getElementById('fileInput');
-            // Create a new FileList containing the selected file
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            fileInput.files = dataTransfer.files;
-            updateFileUploadCard(file.name);
-        }
-
-        function updateFileUploadCard(fileName) {
-            const fileUploadCard = document.querySelector('.file-upload-card');
-            const oldInput = document.getElementById('fileInput');
-            fileUploadCard.innerHTML = `
-                <i class="bi bi-file-earmark-check file-upload-icon"></i>
-                <h5>${fileName}</h5>
-                <div class="file-specs">
-                    <p class="mb-0">Click to change file</p>
-                </div>
-            `;
-            // Preserve the file input and its event listeners
-            fileUploadCard.appendChild(oldInput);
-        }
-
-        // Update the file input change handler
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                handleFileSelect(file);
-            }
-        });
-
-        document.getElementById('textForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const text = document.getElementById('textInput').value;
-            const formData = new FormData();
-            formData.append('text', text);
-            await analyzeSentiment(formData);
-        });
-
-        document.getElementById('fileForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fileInput = document.getElementById('fileInput');
-            const file = fileInput.files[0];
-            if (!file) {
-                alert('Please select a file first');
+            const validExtensions = ['.csv', '.xlsx', '.xls'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!validExtensions.includes(fileExtension)) {
+                alert('Please upload a CSV or Excel file');
+                fileInput.value = '';
+                selectedFileName.textContent = '';
                 return;
             }
-            const formData = new FormData();
-            formData.append('file', file);
-            await analyzeSentiment(formData);
-        });
-
-        async function analyzeSentiment(data) {
-            document.querySelector('.loading').style.display = 'block';
-            document.querySelector('.result-card').style.display = 'none';
-
-            try {
-                const response = await fetch('/analyze', {
-                    method: 'POST',
-                    body: data
-                });
-
-                const result = await response.json();
-                
-                if (response.ok) {
-                    displayResults(result);
-                } else {
-                    alert(result.error || 'An error occurred');
-                }
-            } catch (error) {
-                alert('An error occurred while analyzing the sentiment');
-            } finally {
-                document.querySelector('.loading').style.display = 'none';
-            }
-        }
-
-        function displayResults(result) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '';
-
-            if (result.summary) {
-                // File upload results
-                const summary = result.summary;
-                resultsDiv.innerHTML = `
-                    <div class="overall-sentiment mb-4">
-                        Analysis Summary
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card score-card">
-                                <div class="score-value sentiment-positive">${summary.positive_count}</div>
-                                <div class="score-label">Positive Reviews</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card score-card">
-                                <div class="score-value sentiment-negative">${summary.negative_count}</div>
-                                <div class="score-label">Negative Reviews</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card score-card">
-                                <div class="score-value sentiment-neutral">${summary.neutral_count}</div>
-                                <div class="score-label">Neutral Reviews</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card mt-3">
-                        <div class="card-body">
-                            <p class="mb-1">Total Reviews: ${summary.total_reviews}</p>
-                            <p class="mb-0">Average Sentiment: ${summary.average_sentiment.toFixed(2)}</p>
-                        </div>
-                    </div>
-                `;
-            } else {
-                // Single text result
-                const sentiment = result.overall_sentiment.toLowerCase();
-                resultsDiv.innerHTML = `
-                    <div class="overall-sentiment sentiment-${sentiment} mb-4">
-                        Overall Sentiment: ${result.overall_sentiment}
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card score-card">
-                                <div class="score-value sentiment-positive">${result.pos.toFixed(2)}</div>
-                                <div class="score-label">Positive Score</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card score-card">
-                                <div class="score-value sentiment-negative">${result.neg.toFixed(2)}</div>
-                                <div class="score-label">Negative Score</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card score-card">
-                                <div class="score-value sentiment-neutral">${result.neu.toFixed(2)}</div>
-                                <div class="score-label">Neutral Score</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card mt-3">
-                        <div class="card-body">
-                            <p class="mb-0">Compound Score: ${result.compound.toFixed(2)}</p>
-                        </div>
-                    </div>
-                `;
-            }
-
-            document.querySelector('.result-card').style.display = 'block';
+            
+            selectedFileName.textContent = file.name;
+            dropZone.querySelector('h5').textContent = 'File selected';
+            dropZone.querySelector('.file-specs').style.display = 'none';
         }
     </script>
 </body>

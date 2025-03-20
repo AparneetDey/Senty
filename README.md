@@ -1,48 +1,66 @@
-# Senty - Sentiment Analysis Web Application
+# Sentiment Analysis Web Application
 
-A web-based sentiment analysis tool that analyzes text data and provides sentiment insights through interactive visualizations.
+A web application that performs sentiment analysis on text input and CSV files using TextBlob. Built with Flask and designed for deployment on Vercel.
 
 ## Features
 
-- Upload CSV files containing text data for analysis
-- Sentiment analysis using TextBlob
-- Interactive visualizations including:
-  - Sentiment distribution pie chart
-  - Sentiment score histogram
-  - Word cloud visualization
-- Clean and modern user interface
+- Text-based sentiment analysis
+- CSV file upload and analysis
+- Word cloud visualization
+- Beautiful and responsive UI
+- Real-time analysis results
 
-## Technologies Used
+## Requirements
 
-- Python
+- Python 3.9+
 - Flask
 - TextBlob
-- Plotly
-- Pandas
+- NLTK
+- pandas
+- Other dependencies listed in `requirements.txt`
 
-## Setup and Installation
+## Local Development
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/AparneetDey/Senty.git
+git clone <your-repo-url>
+cd sentiment-analysis
 ```
 
-2. Install dependencies:
+2. Create a virtual environment and activate it:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the application:
+4. Run the application:
 ```bash
 python app.py
 ```
 
-## Usage
+5. Open http://localhost:5000 in your browser
 
-1. Access the web interface
-2. Upload a CSV file containing text data
-3. View the generated sentiment analysis and visualizations
+## Deployment on Vercel
+
+1. Install Vercel CLI:
+```bash
+npm i -g vercel
+```
+
+2. Deploy:
+```bash
+vercel
+```
+
+## File Upload Format
+
+For CSV file analysis, ensure your file has a column containing text reviews. The application will automatically detect and analyze the first text column in the file.
 
 ## License
 
-MIT License 
+MIT 
