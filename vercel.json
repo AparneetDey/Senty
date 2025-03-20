@@ -6,7 +6,8 @@
             "use": "@vercel/python",
             "config": {
                 "runtime": "python3.12",
-                "maxLambdaSize": "15mb"
+                "maxLambdaSize": "15mb",
+                "installCommand": "pip install --no-cache-dir -r requirements.txt"
             }
         }
     ],
@@ -17,6 +18,7 @@
         }
     ],
     "env": {
-        "NLTK_DATA": "/tmp/nltk_data"
+        "NLTK_DATA": "/tmp/nltk_data",
+        "PIP_NO_CACHE_DIR": "1"
     }
 } 
