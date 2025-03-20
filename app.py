@@ -1,23 +1,17 @@
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
-import numpy as np
-from data_processor import DataProcessor
+from textblob import TextBlob
 import plotly.express as px
-import plotly.graph_objects as go
 from collections import Counter
 import re
-from textblob import TextBlob
 
 app = Flask(__name__)
-
-# Initialize data processor
-data_processor = DataProcessor()
 
 def analyze_sentiment(text):
     """Simple sentiment analysis using TextBlob"""
     if not isinstance(text, str):
         return 0
-    analysis = TextBlob(text)
+    analysis = TextBlob(str(text))
     return analysis.sentiment.polarity
 
 def get_sentiment_label(score):
@@ -75,7 +69,7 @@ def upload_file():
             words = re.findall(r'\w+', text.lower())
             word_freq = Counter(words)
             
-            # Create word cloud data
+            # Create word cloud data (limit to top 50 words)
             word_cloud_data = [
                 {'text': word, 'value': freq}
                 for word, freq in word_freq.most_common(50)
